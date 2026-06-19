@@ -8,7 +8,7 @@
 
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 
 const ENDPOINT = 'https://info.cld.hkjc.com/graphql/base/';
@@ -211,4 +211,7 @@ async function main() {
   console.log(`range: ${all[0] ? all[0].date : '-'} .. ${all[all.length - 1] ? all[all.length - 1].date : '-'}`);
 }
 
-main().catch((e) => { console.error(e); process.exit(1); });
+export { GQL, fetchRange, quarterRanges, weekday, normalize, isValid, START_DATE, START_YMD };
+
+const invokedDirectly = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (invokedDirectly) main().catch((e) => { console.error(e); process.exit(1); });

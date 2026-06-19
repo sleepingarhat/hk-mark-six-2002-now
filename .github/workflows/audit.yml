@@ -1,0 +1,29 @@
+name: Data integrity audit
+
+on:
+  schedule:
+    - cron: '0 17 * * *'   # daily ~01:00 Hong Kong time (after the daily update runs)
+  push:
+    paths:
+      - 'data/**'
+      - 'scripts/**'
+      - '.github/workflows/audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: audit-marksix
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Run data integrity & freshness audit
+        run: node scripts/audit.mjs
