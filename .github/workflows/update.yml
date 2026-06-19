@@ -3,6 +3,7 @@ name: Update Mark Six results
 on:
   schedule:
     - cron: '30 14 * * *'   # daily ~22:30 Hong Kong time (14:30 UTC)
+    - cron: '30 15 * * *'   # daily ~23:30 Hong Kong time (catches late-posted results)
   workflow_dispatch:
 
 permissions:

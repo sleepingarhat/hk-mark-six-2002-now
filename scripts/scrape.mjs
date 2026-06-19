@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 // HK Mark Six (六合彩) results scraper — official HKJC GraphQL source.
 // Full-backfills history from 2002-07-04 and appends new draws on each run.
+//
+// Usage:
+//   node scripts/scrape.mjs          # incremental (or full backfill if data is empty)
+//   node scripts/scrape.mjs --full   # force a full rebuild from 2002
 
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
@@ -9,6 +13,11 @@ import path from 'node:path';
 
 const ENDPOINT = 'https://info.cld.hkjc.com/graphql/base/';
 const START_DATE = '2002-07-04';
+const START_YMD = 20020704;
+// Real HK Mark Six suspensions exist (e.g. COVID-19 emptied all of 2020 Q2), so a
+// few empty past quarters are legitimate. Only a systemic fault (or full API
+// outage) empties many quarters at once, so fail only above this tolerance.
+const MAX_EMPTY_PAST_QUARTERS = 3;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const JSON_PATH = path.join(DATA_DIR, 'mark-six.json');
@@ -63,6 +72,7 @@ async function fetchRange(startDate, endDate, tries = 5) {
     query: GQL,
     variables: { startDate, endDate, drawType: 'All' },
   });
+  let lastErr = null;
   for (let k = 0; k < tries; k++) {
     try {
       const res = await fetch(ENDPOINT, {
@@ -79,10 +89,11 @@ async function fetchRange(startDate, endDate, tries = 5) {
       if (json && json.data && json.data.lotteryDraws) return json.data.lotteryDraws;
       if (json && json.errors) throw new Error(JSON.stringify(json.errors));
     } catch (err) {
-      if (k === tries - 1) throw err;
-      await sleep(800 * (k + 1));
+      lastErr = err;
     }
+    if (k < tries - 1) await sleep(800 * (k + 1));
   }
+  if (lastErr) throw lastErr;
   return [];
 }
 
@@ -133,13 +144,14 @@ function isValid(d) {
 
 function todayYYYYMMDD() {
   const n = new Date();
-  return `${n.getUTCFullYear()}${String(n.getUTCMonth() + 1).padStart(2, '0')}${String(n.getUTCDate()).padStart(2, '0')}`;
+  return Number(`${n.getUTCFullYear()}${String(n.getUTCMonth() + 1).padStart(2, '0')}${String(n.getUTCDate()).padStart(2, '0')}`);
 }
 
 async function main() {
   await mkdir(DATA_DIR, { recursive: true });
+  const forceFull = process.argv.includes('--full');
   let existing = [];
-  if (existsSync(JSON_PATH)) {
+  if (!forceFull && existsSync(JSON_PATH)) {
     try { existing = JSON.parse(await readFile(JSON_PATH, 'utf8')); } catch { existing = []; }
   }
   const byId = new Map(existing.map((d) => [d.id, d]));
@@ -147,22 +159,43 @@ async function main() {
 
   const nowYear = new Date().getUTCFullYear();
   const fullBackfill = existing.length === 0;
-  const ranges = fullBackfill
-    ? quarterRanges(2002, nowYear)
-    : quarterRanges(nowYear - 1, nowYear); // incremental: last 2 years (covers quarter boundaries + late corrections)
+  let fromYear;
+  if (fullBackfill) {
+    fromYear = 2002;
+  } else {
+    // Self-recovering window: start from the year of the latest stored draw (capped
+    // so we always re-check the current + previous year for quarter-boundary draws).
+    const latest = existing.reduce((mx, d) => (d.date > mx ? d.date : mx), '0000-00-00');
+    const latestYear = Number(latest.slice(0, 4)) || nowYear - 1;
+    fromYear = Math.min(latestYear, nowYear - 1);
+  }
 
-  console.log(`${fullBackfill ? 'FULL BACKFILL' : 'INCREMENTAL'} — ${ranges.length} quarter requests`);
-  const today = Number(todayYYYYMMDD());
-  for (const [sd, ed] of ranges) {
-    if (Number(sd) > today) break;
+  console.log(`${fullBackfill ? 'FULL BACKFILL' : 'INCREMENTAL'} — years ${fromYear}..${nowYear}`);
+  const today = todayYYYYMMDD();
+  const emptyPast = [];
+  for (const [sd, ed] of quarterRanges(fromYear, nowYear)) {
+    if (Number(ed) < START_YMD) continue;   // quarter entirely before the project start
+    if (Number(sd) > today) break;          // future quarter
     const rows = await fetchRange(sd, ed);
-    let kept = 0;
-    for (const r of rows) {
-      if (!r || r.status !== 'Result') continue;
+    const results = rows.filter((r) => r && r.status === 'Result');
+    // Completeness signal: most fully-elapsed quarters contain draws (HK Mark Six
+    // runs ~3x/week year-round). A handful of empty quarters are legitimate
+    // suspensions; an excess means a systemic API/data fault (see guard below).
+    if (Number(ed) < today && results.length === 0) emptyPast.push(`${sd}-${ed}`);
+    for (const r of results) {
       const d = normalize(r);
-      if (isValid(d)) { byId.set(d.id, d); kept++; }
+      if (isValid(d)) byId.set(d.id, d);
     }
     await sleep(200);
+  }
+
+  if (emptyPast.length) {
+    console.warn(`Note: ${emptyPast.length} past quarter(s) had no draws: ${emptyPast.join(', ')}`);
+  }
+  if (emptyPast.length > MAX_EMPTY_PAST_QUARTERS) {
+    console.error(`Completeness guard tripped — ${emptyPast.length} empty past quarters exceeds tolerance of ${MAX_EMPTY_PAST_QUARTERS} (likely an API/data fault).`);
+    console.error('Aborting WITHOUT writing to avoid persisting a gap.');
+    process.exit(1);
   }
 
   const all = [...byId.values()]
