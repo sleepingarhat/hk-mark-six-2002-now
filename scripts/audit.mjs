@@ -61,31 +61,62 @@ function checkStructure(all, csv) {
   }
 
   const rows = csv.trim().split('\n');
-  if (rows.length - 1 !== all.length) fail(`CSV rows (${rows.length - 1}) != JSON draws (${all.length})`);
-  const a0 = all[0], aN = all[all.length - 1];
-  const fExp = [a0.draw, a0.date, a0.weekday, ...a0.numbers, a0.special].join(',');
-  const lExp = [aN.draw, aN.date, aN.weekday, ...aN.numbers, aN.special].join(',');
-  if ((rows[1] || '') !== fExp) fail('CSV first row does not match JSON');
-  if ((rows[rows.length - 1] || '') !== lExp) fail('CSV last row does not match JSON');
+  const header = 'draw,date,weekday,no1,no2,no3,no4,no5,no6,special';
+  if ((rows[0] || '') !== header) fail('CSV header mismatch');
+  if (rows.length - 1 !== all.length) {
+    fail(`CSV rows (${rows.length - 1}) != JSON draws (${all.length})`);
+  } else {
+    // Full row-by-row comparison: a corrupted middle row must not slip through.
+    let mism = 0, firstBad = null;
+    for (let i = 0; i < all.length; i++) {
+      const d = all[i];
+      const exp = [d.draw, d.date, d.weekday, ...d.numbers, d.special].join(',');
+      if (rows[i + 1] !== exp) { mism++; if (firstBad === null) firstBad = i + 1; }
+    }
+    if (mism) fail(`${mism} CSV row(s) do not match JSON (first at data row ${firstBad})`);
+  }
 }
 
 async function checkFreshness(all) {
   const repoIds = new Set(all.map((d) => d.id));
   const repoLatest = all.reduce((mx, d) => (d.date > mx ? d.date : mx), '0000-00-00');
-  const now = new Date();
   const ymd = (dt) => `${dt.getUTCFullYear()}${String(dt.getUTCMonth() + 1).padStart(2, '0')}${String(dt.getUTCDate()).padStart(2, '0')}`;
-  const start = new Date(now); start.setUTCDate(start.getUTCDate() - 85); // < 3-month API cap
 
-  let source;
+  // 1) API contract probe over a FIXED known-good historical window (an immutable
+  // past quarter that always had draws). This turns the "API returns empty
+  // successfully (shape change / silent outage)" blind spot into a hard failure,
+  // while a genuine recent suspension stays green — the probe still returns the
+  // historical draws, so recent-empty is then correctly read as "no recent draws".
+  const PROBE_START = '20250101', PROBE_END = '20250331';
+  const repoInProbe = all.filter((d) => d.date >= '2025-01-01' && d.date <= '2025-03-31').length;
+  let probe;
   try {
-    source = await fetchRange(ymd(start), ymd(now));
+    probe = await fetchRange(PROBE_START, PROBE_END);
   } catch (e) {
     warn(`freshness check skipped - HKJC unreachable (${String(e).slice(0, 80)})`);
     return { repoLatest, sourceLatest: null };
   }
+  const probeCount = probe.filter((r) => r && r.status === 'Result').length;
+  const probeFloor = Math.max(1, Math.floor(repoInProbe * 0.8));
+  if (probeCount < probeFloor) {
+    fail(`HKJC API contract probe returned ${probeCount} draws for 2025 Q1 (expected >= ${probeFloor}) - likely API shape change or outage`);
+    return { repoLatest, sourceLatest: null };
+  }
+
+  // 2) Recent-window freshness. Contract is verified above, so an empty recent
+  // window legitimately means "no recent draws" (suspension/off-season) -> green.
+  const now = new Date();
+  const start = new Date(now); start.setUTCDate(start.getUTCDate() - 85); // < 3-month API cap
+  let source;
+  try {
+    source = await fetchRange(ymd(start), ymd(now));
+  } catch (e) {
+    warn(`recent-window fetch failed (${String(e).slice(0, 60)}) - contract OK, freshness inconclusive`);
+    return { repoLatest, sourceLatest: null };
+  }
   const results = source.filter((r) => r && r.status === 'Result').map(normalize).filter(isValid);
   if (!results.length) {
-    warn('no recent HKJC results in the last 85 days (suspension or off-season) - freshness inconclusive');
+    warn('no HKJC results in the last 85 days but API contract OK - treating as suspension/off-season');
     return { repoLatest, sourceLatest: null };
   }
   const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
