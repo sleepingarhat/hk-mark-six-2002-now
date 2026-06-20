@@ -22,6 +22,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const JSON_PATH = path.join(DATA_DIR, 'mark-six.json');
 const CSV_PATH = path.join(DATA_DIR, 'mark-six.csv');
+const LATEST_PATH = path.join(DATA_DIR, 'latest.json');
 
 // Exact persisted operation used by the HKJC Mark Six SPA (operationName must be
 // "marksixResult"; the gateway whitelists by operation name then validates the
@@ -132,6 +133,60 @@ function normalize(r) {
   };
 }
 
+// Build the rich "latest draw" payload (data/latest.json) — a separate public
+// contract for the marksix UI. Keeps the FULL 7-tier prize breakdown + winning
+// units that normalize() intentionally drops from the historical archive.
+// NO wall-clock field: content is a pure function of the draw so reruns stay
+// byte-identical (no spurious daily commits); it changes only when HKJC updates
+// the draw's dividends or a new draw lands.
+function buildLatest(rawRow, normRec, nextDraw) {
+  const pool = (rawRow && rawRow.lotteryPool) || {};
+  const prizes = (pool.lotteryPrizes || [])
+    .map((p) => ({ tier: Number(p.type), winningUnit: Number(p.winningUnit) || 0, dividend: p.dividend || '0' }))
+    .filter((p) => p.tier >= 1 && p.tier <= 7)
+    .sort((a, b) => a.tier - b.tier);
+  return {
+    id: normRec.id,
+    draw: normRec.draw,
+    date: normRec.date,
+    weekday: normRec.weekday,
+    numbers: normRec.numbers,
+    special: normRec.special,
+    snowball: normRec.snowball,
+    totalInvestment: pool.totalInvestment || null,
+    jackpot: pool.jackpot || null,
+    unitBet: Number(pool.unitBet) || 10,
+    firstPrizeDividend: pool.derivedFirstPrizeDiv || null,
+    prizes,
+    nextDraw: nextDraw || null,
+  };
+}
+
+// Best-effort upcoming-draw lookup. The whitelisted marksixResult op currently
+// returns ONLY status==='Result' rows (the next draw + 估計頭獎基金 are not
+// exposed), so this returns null today and the UI shows 待公佈. Written so it
+// "just works" if HKJC ever starts returning the open draw on this op.
+async function fetchNextDraw() {
+  try {
+    const t = new Date();
+    const ymd = (d) => `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}${String(d.getUTCDate()).padStart(2, '0')}`;
+    const rows = await fetchRange(ymd(t), ymd(new Date(t.getTime() + 21 * 864e5)));
+    const up = rows.find((r) => r && r.status && r.status !== 'Result');
+    if (!up) return null;
+    const pool = up.lotteryPool || {};
+    const date = (up.drawDate || '').slice(0, 10) || null;
+    return {
+      draw: `${String(up.year).slice(2)}/${String(up.no).padStart(3, '0')}`,
+      date,
+      weekday: date ? weekday(date) : null,
+      estimatedPrize: pool.estimatedPrize || pool.jackpot || null,
+      snowball: up.snowballName_ch || null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 function isValid(d) {
   if (!d.date || d.date < START_DATE) return false;
   if (!Array.isArray(d.numbers) || d.numbers.length !== 6) return false;
@@ -173,6 +228,7 @@ async function main() {
   console.log(`${fullBackfill ? 'FULL BACKFILL' : 'INCREMENTAL'} — years ${fromYear}..${nowYear}`);
   const today = todayYYYYMMDD();
   const emptyPast = [];
+  let latestRaw = null, latestNorm = null;
   for (const [sd, ed] of quarterRanges(fromYear, nowYear)) {
     if (Number(ed) < START_YMD) continue;   // quarter entirely before the project start
     if (Number(sd) > today) break;          // future quarter
@@ -184,7 +240,14 @@ async function main() {
     if (Number(ed) < today && results.length === 0) emptyPast.push(`${sd}-${ed}`);
     for (const r of results) {
       const d = normalize(r);
-      if (isValid(d)) byId.set(d.id, d);
+      if (isValid(d)) {
+        byId.set(d.id, d);
+        // track the newest valid Result (by date, then draw no) to source latest.json
+        if (!latestNorm || d.date > latestNorm.date || (d.date === latestNorm.date && d.draw > latestNorm.draw)) {
+          latestRaw = r;
+          latestNorm = d;
+        }
+      }
     }
     await sleep(200);
   }
@@ -209,9 +272,23 @@ async function main() {
 
   console.log(`draws: ${before} -> ${all.length} (added ${all.length - before})`);
   console.log(`range: ${all[0] ? all[0].date : '-'} .. ${all[all.length - 1] ? all[all.length - 1].date : '-'}`);
+
+  // data/latest.json — only (re)write when this run actually fetched the TRUE
+  // latest draw (its raw row carries the full prize breakdown). If a run didn't
+  // reach the newest draw, leave the existing latest.json untouched rather than
+  // clobber it with an older draw.
+  const globalLatest = all[all.length - 1];
+  if (latestRaw && latestNorm && globalLatest && latestNorm.id === globalLatest.id) {
+    const nextDraw = await fetchNextDraw();
+    const latest = buildLatest(latestRaw, latestNorm, nextDraw);
+    await writeFile(LATEST_PATH, JSON.stringify(latest, null, 2) + '\n');
+    console.log(`latest.json -> ${latest.draw} · ${latest.prizes.length} prize tiers · nextDraw ${nextDraw ? nextDraw.date : '待公佈'}`);
+  } else {
+    console.warn('latest.json: not refreshed this run (newest draw not in fetched window) — kept existing');
+  }
 }
 
-export { GQL, fetchRange, quarterRanges, weekday, normalize, isValid, START_DATE, START_YMD };
+export { GQL, fetchRange, quarterRanges, weekday, normalize, buildLatest, fetchNextDraw, isValid, START_DATE, START_YMD };
 
 const invokedDirectly = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (invokedDirectly) main().catch((e) => { console.error(e); process.exit(1); });

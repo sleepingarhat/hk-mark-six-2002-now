@@ -1,0 +1,58 @@
+{
+  "id": "202665N",
+  "draw": "26/065",
+  "date": "2026-06-18",
+  "weekday": "Thu",
+  "numbers": [
+    6,
+    20,
+    26,
+    31,
+    34,
+    47
+  ],
+  "special": 24,
+  "snowball": "端午金多寶",
+  "totalInvestment": "147419944",
+  "jackpot": "60000000",
+  "unitBet": 10,
+  "firstPrizeDividend": "80000000",
+  "prizes": [
+    {
+      "tier": 1,
+      "winningUnit": 10,
+      "dividend": "76315690"
+    },
+    {
+      "tier": 2,
+      "winningUnit": 40,
+      "dividend": "1359640"
+    },
+    {
+      "tier": 3,
+      "winningUnit": 2790,
+      "dividend": "51980"
+    },
+    {
+      "tier": 4,
+      "winningUnit": 6085,
+      "dividend": "9600"
+    },
+    {
+      "tier": 5,
+      "winningUnit": 135069,
+      "dividend": "640"
+    },
+    {
+      "tier": 6,
+      "winningUnit": 178924,
+      "dividend": "320"
+    },
+    {
+      "tier": 7,
+      "winningUnit": 2443529,
+      "dividend": "40"
+    }
+  ],
+  "nextDraw": null
+}
