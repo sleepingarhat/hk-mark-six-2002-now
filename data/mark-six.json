@@ -63648,5 +63648,24 @@
     "totalInvestment": "39025043",
     "jackpot": "1897501",
     "firstPrizeDividend": "8000000"
+  },
+  {
+    "id": "202674N",
+    "draw": "26/074",
+    "date": "2026-07-09",
+    "weekday": "Thu",
+    "numbers": [
+      1,
+      7,
+      18,
+      21,
+      33,
+      38
+    ],
+    "special": 28,
+    "snowball": null,
+    "totalInvestment": "40131487",
+    "jackpot": "4000000",
+    "firstPrizeDividend": "8000000"
   }
 ]
