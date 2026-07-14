@@ -1,56 +1,56 @@
 {
-  "id": "202675N",
-  "draw": "26/075",
-  "date": "2026-07-11",
-  "weekday": "Sat",
+  "id": "202676N",
+  "draw": "26/076",
+  "date": "2026-07-14",
+  "weekday": "Tue",
   "numbers": [
-    2,
-    5,
-    7,
-    11,
-    41,
-    46
+    10,
+    16,
+    19,
+    27,
+    31,
+    44
   ],
-  "special": 43,
+  "special": 17,
   "snowball": null,
-  "totalInvestment": "36820025",
+  "totalInvestment": "40839244",
   "jackpot": "0",
   "unitBet": 10,
   "firstPrizeDividend": "8000000",
   "prizes": [
     {
       "tier": 1,
-      "winningUnit": 10,
-      "dividend": "8000000"
+      "winningUnit": 20,
+      "dividend": "4000000"
     },
     {
       "tier": 2,
-      "winningUnit": 30,
-      "dividend": "434880"
+      "winningUnit": 5,
+      "dividend": "1239630"
     },
     {
       "tier": 3,
-      "winningUnit": 650,
-      "dividend": "53520"
+      "winningUnit": 615,
+      "dividend": "67180"
     },
     {
       "tier": 4,
-      "winningUnit": 1500,
+      "winningUnit": 1600,
       "dividend": "9600"
     },
     {
       "tier": 5,
-      "winningUnit": 41942,
+      "winningUnit": 33665,
       "dividend": "640"
     },
     {
       "tier": 6,
-      "winningUnit": 34894,
+      "winningUnit": 46815,
       "dividend": "320"
     },
     {
       "tier": 7,
-      "winningUnit": 780627,
+      "winningUnit": 604885,
       "dividend": "40"
     }
   ],
