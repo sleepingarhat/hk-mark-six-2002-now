@@ -63724,5 +63724,24 @@
     "totalInvestment": "38183508",
     "jackpot": "619815",
     "firstPrizeDividend": "8000000"
+  },
+  {
+    "id": "202678N",
+    "draw": "26/078",
+    "date": "2026-07-21",
+    "weekday": "Tue",
+    "numbers": [
+      1,
+      6,
+      37,
+      41,
+      45,
+      47
+    ],
+    "special": 8,
+    "snowball": "暑期金多寶",
+    "totalInvestment": "240444149",
+    "jackpot": "75000000",
+    "firstPrizeDividend": "100000000"
   }
 ]
