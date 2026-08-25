@@ -2,8 +2,11 @@ name: Update Mark Six results
 
 on:
   schedule:
-    - cron: '30 14 * * *'   # daily ~22:30 Hong Kong time (14:30 UTC)
-    - cron: '30 15 * * *'   # daily ~23:30 Hong Kong time (catches late-posted results)
+    # Draw is 21:30 HKT; fetch starting 1 hour later.
+    # GitHub cron is UTC (HKT = UTC+8).
+    - cron: '30 14 * * *'   # 22:30 HKT — primary (draw + 1h)
+    - cron: '0 15 * * *'    # 23:00 HKT — backup if results posted late
+    - cron: '30 15 * * *'   # 23:30 HKT — final catch-up
   workflow_dispatch:
 
 permissions:
