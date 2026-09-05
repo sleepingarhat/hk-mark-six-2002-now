@@ -1,56 +1,56 @@
 {
-  "id": "202695N",
-  "draw": "26/095",
-  "date": "2026-08-29",
+  "id": "202696N",
+  "draw": "26/096",
+  "date": "2026-09-05",
   "weekday": "Sat",
   "numbers": [
-    4,
-    7,
-    8,
-    11,
+    9,
+    18,
     26,
-    30
+    30,
+    33,
+    45
   ],
-  "special": 42,
-  "snowball": null,
-  "totalInvestment": "68293616",
-  "jackpot": "24831694",
+  "special": 28,
+  "snowball": "六合彩50週年金多寶（第二期）",
+  "totalInvestment": "365384656",
+  "jackpot": "185000000",
   "unitBet": 10,
-  "firstPrizeDividend": "32000000",
+  "firstPrizeDividend": "228000000",
   "prizes": [
     {
       "tier": 1,
-      "winningUnit": 70,
-      "dividend": "4149710"
+      "winningUnit": 35,
+      "dividend": "63376610"
     },
     {
       "tier": 2,
-      "winningUnit": 30,
-      "dividend": "301160"
+      "winningUnit": 200,
+      "dividend": "613630"
     },
     {
       "tier": 3,
-      "winningUnit": 4325,
-      "dividend": "19200"
+      "winningUnit": 8750,
+      "dividend": "37400"
     },
     {
       "tier": 4,
-      "winningUnit": 3795,
+      "winningUnit": 22480,
       "dividend": "9600"
     },
     {
       "tier": 5,
-      "winningUnit": 147645,
+      "winningUnit": 412228,
       "dividend": "640"
     },
     {
       "tier": 6,
-      "winningUnit": 86450,
+      "winningUnit": 589973,
       "dividend": "320"
     },
     {
       "tier": 7,
-      "winningUnit": 1888166,
+      "winningUnit": 6781663,
       "dividend": "40"
     }
   ],
