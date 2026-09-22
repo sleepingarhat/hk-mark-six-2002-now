@@ -1,56 +1,56 @@
 {
-  "id": "2026102N",
-  "draw": "26/102",
-  "date": "2026-09-19",
-  "weekday": "Sat",
+  "id": "2026103N",
+  "draw": "26/103",
+  "date": "2026-09-22",
+  "weekday": "Tue",
   "numbers": [
-    5,
-    8,
-    11,
-    14,
-    19,
-    31
+    2,
+    34,
+    35,
+    43,
+    45,
+    46
   ],
-  "special": 21,
+  "special": 41,
   "snowball": null,
-  "totalInvestment": "47772644",
-  "jackpot": "8000000",
+  "totalInvestment": "52277424",
+  "jackpot": "6246745",
   "unitBet": 10,
-  "firstPrizeDividend": "13000000",
+  "firstPrizeDividend": "10000000",
   "prizes": [
     {
       "tier": 1,
-      "winningUnit": 5,
-      "dividend": "12493490"
+      "winningUnit": 15,
+      "dividend": "8322360"
     },
     {
       "tier": 2,
-      "winningUnit": 40,
-      "dividend": "374450"
+      "winningUnit": 5,
+      "dividend": "2078930"
     },
     {
       "tier": 3,
-      "winningUnit": 1620,
-      "dividend": "24650"
+      "winningUnit": 960,
+      "dividend": "57740"
     },
     {
       "tier": 4,
-      "winningUnit": 3255,
+      "winningUnit": 1445,
       "dividend": "9600"
     },
     {
       "tier": 5,
-      "winningUnit": 68132,
+      "winningUnit": 42075,
       "dividend": "640"
     },
     {
       "tier": 6,
-      "winningUnit": 76349,
+      "winningUnit": 44665,
       "dividend": "320"
     },
     {
       "tier": 7,
-      "winningUnit": 1024021,
+      "winningUnit": 669165,
       "dividend": "40"
     }
   ],
